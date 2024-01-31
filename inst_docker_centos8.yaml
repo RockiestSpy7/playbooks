@@ -7,9 +7,9 @@
   tasks:
     - name: Install Epel-Release
       yum:
-        name: Epel-Release
+        name: epel-release
         state: latest
-        
+
     - name: Install yum utils
       yum:
         name: yum-utils
