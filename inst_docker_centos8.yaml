@@ -16,7 +16,7 @@
           - docker-latest-logrotate
           - docker-logrotate
           - docker-engine
-      state: removed
+        state: removed
 
     - name: Install Epel-Release
       yum:
