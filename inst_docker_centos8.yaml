@@ -5,6 +5,11 @@
   become: yes
 
   tasks:
+    - name: Install Epel-Release
+      yum:
+        name: Epel-Release
+        state: latest
+        
     - name: Install yum utils
       yum:
         name: yum-utils
