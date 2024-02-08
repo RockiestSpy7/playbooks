@@ -2,8 +2,9 @@
 - name: Install Nginx
   gather_facts: No
   hosts:
-  - nginx1
-  - nginx2
+    - nginx1
+    - nginx2
+  become: yes
   
   tasks:
     - name: Install  Epel Release for CentOS
