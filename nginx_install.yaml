@@ -1,0 +1,25 @@
+---
+- name: Install Nginx
+  gather_facts: No
+  hosts:
+  - nginx1
+  - nginx2
+  
+  tasks:
+    - name: Install  Epel Release for CentOS
+      yum: 
+        name: epel-release
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install Nginx
+      yum: 
+        name: nginx
+        state: present
+    
+    - name: Start and Enable Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+      
