@@ -39,7 +39,7 @@
                 net.bridge.bridge-nf-call-ip6tables = 1
 
      - name: make settings applicable without restart
-       command: sudo syctl --system
+       command: sudo sysctl --system
  
      - name: installing containerd and setting its config. restart as well.
        shell: |
