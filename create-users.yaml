@@ -1,0 +1,17 @@
+- hosts: 'kube1, kube2, kube3'
+  become: yes
+
+  tasks:
+    - name: makes a user
+      user: name=ansible append=yes state=present createhome=yes shell=/bin/bash
+
+    - name: gives the user privalage to run sudo without a password
+      lineinfile:
+        dest: /etc/sudoers
+        line: 'ansible  ALL=(ALL) NOPASSWD: ALL'
+        validate: 'visudo -cf %s'
+
+    - name: add authorized key to user
+      authorized_key: user=ansible key="{{item}}"
+      with_file:
+        - ~/.ssh/id_rsa.pub

@@ -1,0 +1,75 @@
+---
+- hosts: "kube1, kube2, kube3"
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  become_user: ansible
+  gather_facts: yes
+  connection: ssh
+
+  tasks:
+    - name: Creating congif file for containerd
+      file:
+        path: "/etc/modules-load.d/containerd.conf"
+        state: "touch"
+
+    - name: setting up pre-requiesites for containerd
+      blockinfile:
+        path: "/etc/modules-load.d/containerd.conf"
+        block: |
+              overlay
+              br_netfilter
+    
+    - name: loading required modules
+      shell: |
+              sudo modprobe overlay
+              sudo modprobe br_netfilter
+
+    - name: adding required settings for containerd
+      blockinfile:
+        path: "/etc/sysctl.d/99-kubernetes-cri.conf"
+        block: |
+                net.bridge.bridge-nf-call-iptables = 1
+                net.ipv4.ip_forward = 1
+                net.bridge.bridge-nf-call-ip6tables = 1
+
+    - name: configuring network settings for kubernetes
+      file:
+        path: "/etc/sysctl.d/99-kubernetes-cri.conf"
+        state: "touch"
+
+    - name: make settings applicable without restart
+      command: sudo syctl --system
+
+    - name: installing containerd and setting its config. restart as well.
+      shell: |
+              sudo dnf install -y containerd
+              sudo mkdir -p /etc/containerd
+              sudo containerd config default | sudo tee /etc/containerd/config.toml
+              sudo systemctl restart containerd
+
+    - name: create a kubernetes repo file
+      file:
+        path: "/etc/yum.repos.d/kubernetes.repo"
+        state: "touch"
+
+    - name: write repo information in kubernetes repo file
+      blockinfile:
+        path: "/etc/yum.repos.d/kubernetes.repo"
+        block: |
+                [kubernetes]
+                name=kubernetes
+                baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+                enalbed=1
+                gpgcheck=1
+                repo_gpgcheck=1
+                gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+    - name: install kubernetes
+      shell: |
+              sudo dnf install -y kubelet kubeadm kubectl
+
+    - name: disabling swap for kubelet
+      shell: |
+              sudo swapoff -a
+              sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
