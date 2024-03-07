@@ -1,0 +1,85 @@
+---
+- name: Install and configure DokuWiki
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Update package cache
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Install Apache HTTP Server
+      yum:
+        name: httpd
+        state: present
+
+    - name: Allow HTTP and HTTPS traffic through firewall
+      firewalld:
+        zone: public
+        service: "{{ item }}"
+        permanent: yes
+        state: enabled
+      loop:
+        - http
+        - https
+
+    - name: Reload firewall
+      firewalld:
+        service: firewalld
+        state: reloaded
+
+    - name: Reset PHP module
+      command: "dnf module reset php -y"
+
+    - name: Install PHP 8.0 and required PHP extensions
+      dnf:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - php:8.0
+        - php
+        - php-cli
+        - php-common
+        - php-gd
+        - php-mbstring
+        - php-mysqlnd
+        - php-xml
+
+    - name: Download DokuWiki
+      get_url:
+        url: https://download.dokuwiki.org/src/dokuwiki/dokuwiki-stable.tgz
+        dest: /tmp/dokuwiki-stable.tgz
+
+    - name: Extract DokuWiki archive
+      unarchive:
+        src: /tmp/dokuwiki-stable.tgz
+        dest: /var/www/html/
+        remote_src: yes
+        extra_opts: --strip-components=1
+        creates: /var/www/html/dokuwiki/
+
+    - name: Copy .htaccess file
+      copy:
+        src: /var/www/html/dokuwiki/.htaccess.dist
+        dest: /var/www/html/dokuwiki/.htaccess
+
+    - name: Set ownership of DokuWiki directory
+      file:
+        path: /var/www/html/dokuwiki
+        owner: apache
+        group: apache
+        recurse: yes
+
+    - name: Allow Apache to read/write DokuWiki directories
+      selinux:
+        type: httpd_sys_rw_content_t
+        state: permissive
+        seuser: system_u
+        serange: s0
+        setype: httpd_sys_content_t
+        setype: httpd_sys_rw_content_t
+        target: "/var/www/html/dokuwiki/(conf|data)(/.*)?"
+
+    - name: Restore SELinux context for DokuWiki directories
+      command: restorecon -Rv /var/www/html/dokuwiki/(conf|data)
